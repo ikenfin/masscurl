@@ -134,17 +134,37 @@
 	}
 
 	$urls_in_fd = fopen($urls_in, 'r');
-	$urls_out_fd = fopen($urls_out, 'w');
+
+	$mh = curl_multi_init();
+
+	$curls = array();
+
+	$i = 0;
 
 	while(($url = fgets($urls_in_fd)) !== FALSE) {
-		$curl = curl_init();
-		curl_setopt($curl, CURLOPT_URL, trim($url));
-		curl_setopt($curl, CURLOPT_HEADER, 0);
-		curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
-		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, TRUE);
+		$curls[$i] = curl_init();
+		curl_setopt($curls[$i], CURLOPT_URL, trim($url));
+		curl_setopt($curls[$i], CURLOPT_HEADER, 0);
+		curl_setopt($curls[$i], CURLOPT_RETURNTRANSFER, TRUE);
+		curl_setopt($curls[$i], CURLOPT_FOLLOWLOCATION, TRUE);
 		
-		curl_exec($curl);
+		curl_multi_add_handle($mh, $curls[$i]);
 
+		$i++;
+	}
+
+	fclose($urls_in_fd);
+
+	$running = 0;
+	do {
+		curl_multi_exec($mh, $running);
+	}
+	while($running > 0);
+
+	$urls_out_fd = fopen($urls_out, 'w');
+
+	foreach($curls as $index=>$curl) {
+		
 		$info = curl_getinfo($curl);
 		
 		if(count($filter_statuses) > 0) {
@@ -179,7 +199,9 @@
 		}
 
 		fwrite($urls_out_fd, $message);
+
+		curl_multi_remove_handle($mh, $curl);
 	}
 
-	fclose($urls_in_fd);
+	curl_multi_close($mh);
 	fclose($urls_out_fd);
