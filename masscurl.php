@@ -136,8 +136,9 @@
 	$urls_in_fd = fopen($urls_in, 'r');
 	$urls_out_fd = fopen($urls_out, 'w');
 
+	$curl = curl_init();
+
 	while(($url = fgets($urls_in_fd)) !== FALSE) {
-		$curl = curl_init();
 		curl_setopt($curl, CURLOPT_URL, trim($url));
 		curl_setopt($curl, CURLOPT_HEADER, 0);
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
@@ -180,6 +181,8 @@
 
 		fwrite($urls_out_fd, $message);
 	}
+
+	curl_close($curl);
 
 	fclose($urls_in_fd);
 	fclose($urls_out_fd);
